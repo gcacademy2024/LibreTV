@@ -6,6 +6,18 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import session from 'express-session';
+import authRoutes from './api/auth.js';
+import { 
+  authMiddleware, 
+  compatibilityMiddleware, 
+  corsEnhanced, 
+  isLegacyMode 
+} from './lib/authMiddleware.js';
+import { 
+  initializeDefaultAdmin, 
+  cleanupExpiredSessions 
+} from './lib/userManager.js';
 
 dotenv.config();
 
@@ -32,11 +44,27 @@ const log = (...args) => {
 
 const app = express();
 
-app.use(cors({
-  origin: config.corsOrigin,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+// 增强的CORS支持
+app.use(corsEnhanced);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Session配置
+app.use(session({
+  secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24小时
+  }
 }));
+
+// 兼容性中间件 - 处理新旧系统共存
+app.use(compatibilityMiddleware);
 
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -53,17 +81,36 @@ function sha256Hash(input) {
   });
 }
 
-async function renderPage(filePath, password) {
+async function renderPage(filePath, password, req) {
   let content = fs.readFileSync(filePath, 'utf8');
+  
+  // 注入系统配置
+  content = content.replace('{{MULTI_USER_ENABLED}}', !isLegacyMode());
+  content = content.replace('{{LEGACY_MODE}}', isLegacyMode());
+  
+  // 注入用户信息
+  if (req && req.user) {
+    content = content.replace('{{CURRENT_USER}}', JSON.stringify(req.user));
+  } else {
+    content = content.replace('{{CURRENT_USER}}', 'null');
+  }
+  
+  // 兼容旧的密码系统
   if (password !== '') {
     const sha256 = await sha256Hash(password);
     content = content.replace('{{PASSWORD}}', sha256);
+  } else {
+    content = content.replace('{{PASSWORD}}', '');
   }
+  
   // 添加ADMINPASSWORD注入
   if (config.adminpassword !== '') {
       const adminSha256 = await sha256Hash(config.adminpassword);
       content = content.replace('{{ADMINPASSWORD}}', adminSha256);
-  } 
+  } else {
+      content = content.replace('{{ADMINPASSWORD}}', '');
+  }
+  
   return content;
 }
 
@@ -79,7 +126,7 @@ app.get(['/', '/index.html', '/player.html'], async (req, res) => {
         break;
     }
     
-    const content = await renderPage(filePath, config.password);
+    const content = await renderPage(filePath, config.password, req);
     res.send(content);
   } catch (error) {
     console.error('页面渲染错误:', error);
@@ -90,13 +137,16 @@ app.get(['/', '/index.html', '/player.html'], async (req, res) => {
 app.get('/s=:keyword', async (req, res) => {
   try {
     const filePath = path.join(__dirname, 'index.html');
-    const content = await renderPage(filePath, config.password);
+    const content = await renderPage(filePath, config.password, req);
     res.send(content);
   } catch (error) {
     console.error('搜索页面渲染错误:', error);
     res.status(500).send('读取静态页面失败');
   }
 });
+
+// API路由
+app.use('/api/auth', authRoutes);
 
 function isValidUrl(urlString) {
   try {
@@ -205,17 +255,47 @@ app.use((req, res) => {
   res.status(404).send('页面未找到');
 });
 
+// 初始化系统
+async function initializeSystem() {
+  try {
+    // 如果没有启用旧的密码系统，则初始化多用户系统
+    if (!isLegacyMode()) {
+      await initializeDefaultAdmin();
+      console.log('多用户系统已启用');
+    } else {
+      console.log('兼容模式已启用（使用旧的密码系统）');
+    }
+    
+    // 定期清理过期会话
+    setInterval(cleanupExpiredSessions, 60 * 60 * 1000); // 每小时清理一次
+  } catch (error) {
+    console.error('系统初始化错误:', error);
+  }
+}
+
 // 启动服务器
-app.listen(config.port, () => {
+app.listen(config.port, async () => {
   console.log(`服务器运行在 http://localhost:${config.port}`);
-  if (config.password !== '') {
-    console.log('用户登录密码已设置');
+  
+  if (isLegacyMode()) {
+    if (config.password !== '') {
+      console.log('用户登录密码已设置');
+    }
+    if (config.adminpassword !== '') {
+      console.log('管理员登录密码已设置');
+    }
   }
-  if (config.adminpassword !== '') {
-    console.log('管理员登录密码已设置');
-  }
+  
   if (config.debug) {
     console.log('调试模式已启用');
-    console.log('配置:', { ...config, password: config.password ? '******' : '', adminpassword: config.adminpassword? '******' : '' });
+    console.log('配置:', { 
+      ...config, 
+      password: config.password ? '******' : '', 
+      adminpassword: config.adminpassword ? '******' : '',
+      multiUserEnabled: !isLegacyMode()
+    });
   }
+  
+  // 初始化系统
+  await initializeSystem();
 });

@@ -233,6 +233,9 @@
     <script src="js/search.js"></script>
     <script src="js/player.js"></script>
 
+    <!-- 多用户认证系统 -->
+    <script src="js/auth.js"></script>
+
     <script>
         // 创建全局环境变量对象
         window.__ENV__ = window.__ENV__ || {};
@@ -241,6 +244,11 @@
         // PASSWORD 变量将在这里被服务器端注入
         window.__ENV__.PASSWORD = "{{PASSWORD}}";
         window.__ENV__.ADMINPASSWORD = "{{ADMINPASSWORD}}";
+        
+        // 多用户系统配置
+        window.__ENV__.MULTI_USER_ENABLED = {{MULTI_USER_ENABLED}};
+        window.__ENV__.LEGACY_MODE = {{LEGACY_MODE}};
+        window.__ENV__.CURRENT_USER = {{CURRENT_USER}};
 
         // 修复 home 跳转
         document.addEventListener('DOMContentLoaded', function() {

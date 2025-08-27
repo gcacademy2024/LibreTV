@@ -176,6 +176,11 @@ async function handlePasswordSubmit() {
  */
 // 修改initPasswordProtection函数
 function initPasswordProtection() {
+    // 如果启用了多用户系统，则不使用旧的密码保护
+    if (window.__ENV__ && window.__ENV__.MULTI_USER_ENABLED === true) {
+        return;
+    }
+    
     if (!isPasswordProtected()) {
         return;
     }

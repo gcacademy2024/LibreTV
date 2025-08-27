@@ -1,0 +1,35 @@
+{
+  "users": {
+    "1": {
+      "id": 1,
+      "username": "admin",
+      "email": null,
+      "password": "$2b$12$ueN5vHuCLjSA2FW6bFkmCe6SZ5eAHzjxuzAUBAzecLtTCrXg5WFG6",
+      "role": "admin",
+      "createdAt": "2025-08-27T06:53:27.614Z",
+      "lastLogin": null,
+      "isActive": true
+    },
+    "2": {
+      "id": 2,
+      "username": "testuser",
+      "email": "test@example.com",
+      "password": "$2b$12$N..rBWEFbxpUL6Va.JAxcuaQMCAafNfX959kvPfttLZ0Sf/rQw0ee",
+      "role": "user",
+      "createdAt": "2025-08-27T06:53:42.619Z",
+      "lastLogin": "2025-08-27T06:56:36.494Z",
+      "isActive": true
+    },
+    "3": {
+      "id": 3,
+      "username": "newuser",
+      "email": "new@example.com",
+      "password": "$2b$12$Zj2MV6aokp38vvoYRlOOC.3mo9I2QeTiSt6Tl78O19qyxg.EKVWyu",
+      "role": "viewer",
+      "createdAt": "2025-08-27T06:56:49.868Z",
+      "lastLogin": null,
+      "isActive": true
+    }
+  },
+  "nextId": 4
+}
