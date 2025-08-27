@@ -1,0 +1,25 @@
+{
+  "users": {
+    "1": {
+      "id": 1,
+      "username": "admin",
+      "email": null,
+      "password": "$2b$12$ueN5vHuCLjSA2FW6bFkmCe6SZ5eAHzjxuzAUBAzecLtTCrXg5WFG6",
+      "role": "admin",
+      "createdAt": "2025-08-27T06:53:27.614Z",
+      "lastLogin": null,
+      "isActive": true
+    },
+    "2": {
+      "id": 2,
+      "username": "testuser",
+      "email": "test@example.com",
+      "password": "$2b$12$N..rBWEFbxpUL6Va.JAxcuaQMCAafNfX959kvPfttLZ0Sf/rQw0ee",
+      "role": "user",
+      "createdAt": "2025-08-27T06:53:42.619Z",
+      "lastLogin": "2025-08-27T06:53:51.710Z",
+      "isActive": true
+    }
+  },
+  "nextId": 3
+}
